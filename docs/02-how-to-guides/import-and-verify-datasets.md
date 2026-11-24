@@ -45,7 +45,7 @@ Refer to the [Datasets and Loader Reference](../03-reference/datasets-and-script
 2. Check document counts in `sample_mflix.movies` and `sample_training.inspections`:
 
 ```bash
-mongosh --host localhost --port 27017 --quiet --eval "db.getSiblingDB('sample_mflix').movies.countDocuments()"
+mongosh --host localhost --port 27017 --quiet --eval "printjson({movies: db.getSiblingDB('sample_mflix').movies.countDocuments(), inspections: db.getSiblingDB('sample_training').inspections.countDocuments()})"
 ```
 
 3. Run the local offline validation suite at the repository root:

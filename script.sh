@@ -50,6 +50,6 @@ for directory in sample_*; do
     for data_file in "$directory"/*.json; do
         [ -f "$data_file" ] || continue
         collection="$(basename "$data_file" .json)"
-        mongoimport --drop --host "$HOST" --port "$PORT" --db "$directory" --collection "$collection" --file "$data_file" "${auth_args[@]}"
+        mongoimport --drop --host "$HOST" --port "$PORT" --db "$directory" --collection "$collection" --file "$data_file" ${auth_args[@]+"${auth_args[@]}"}
     done
 done

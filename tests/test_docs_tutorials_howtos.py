@@ -129,6 +129,8 @@ class TestDocsTutorialsHowtos(unittest.TestCase):
         self.assertEqual(help_run.returncode, 0, help_run.stderr)
         self.assertIn("Usage: ./script.sh", help_run.stdout)
 
+        self.assertIn('${auth_args[@]+"${auth_args[@]}"}', script_text)
+
         mock_script = r"""set -euo pipefail
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
@@ -147,16 +149,21 @@ printf '%s\n' "$*" >> "${MOCK_LOG}"
 SH
 chmod +x "$tmp/bin/mongoimport"
 
-export MOCK_LOG="$tmp/calls.log"
+# Verify unauthenticated quickstart path runs 21 imports cleanly without -u/-p flags.
+export MOCK_LOG="$tmp/noauth.log"
+PATH="$tmp/bin:$PATH" ./script.sh localhost 27017
+sed 's/^/NOAUTH: /' "$MOCK_LOG"
+
+# Verify authenticated path passes credentials and skips non-dataset folders.
+export MOCK_LOG="$tmp/auth.log"
 PATH="$tmp/bin:$PATH" ./script.sh 127.0.0.1 27018 admin 'secret123'
-wc -l < "$MOCK_LOG"
+sed 's/^/AUTH: /' "$MOCK_LOG"
 
 if PATH="$tmp/bin:$PATH" ./script.sh localhost 27017 onlyuser 2>"$tmp/partial.err"; then
   echo "UNEXPECTED_SUCCESS_PARTIAL_AUTH" >&2
   exit 1
 fi
 grep -q "both username and password" "$tmp/partial.err"
-cat "$MOCK_LOG"
 """
         # Pass LF script via stdin (-s) so Windows WSL bash.exe and Linux bash parse quotes identically.
         mocked = subprocess.run(
@@ -169,9 +176,18 @@ cat "$MOCK_LOG"
         mocked_out = mocked.stdout.decode("utf-8", "replace")
         mocked_err = mocked.stderr.decode("utf-8", "replace")
         self.assertEqual(mocked.returncode, 0, mocked_out + mocked_err)
-        call_lines = [ln for ln in mocked_out.splitlines() if "--db " in ln]
-        self.assertEqual(len(call_lines), 21, f"Expected 21 dataset imports, got: {call_lines}")
-        for line in call_lines:
+        noauth_lines = [ln for ln in mocked_out.splitlines() if ln.startswith("NOAUTH: ")]
+        auth_lines = [ln for ln in mocked_out.splitlines() if ln.startswith("AUTH: ")]
+        self.assertEqual(len(noauth_lines), 21, f"Expected 21 unauthenticated imports, got: {noauth_lines}")
+        self.assertEqual(len(auth_lines), 21, f"Expected 21 authenticated imports, got: {auth_lines}")
+        for line in noauth_lines:
+            self.assertIn("--host localhost --port 27017 --db sample_", line)
+            self.assertNotIn("--authenticationDatabase", line)
+            self.assertNotIn(" -u ", line)
+            self.assertNotIn(" -p ", line)
+            self.assertNotIn("--db docs", line)
+            self.assertNotIn("--db tests", line)
+        for line in auth_lines:
             self.assertIn("--host 127.0.0.1 --port 27018 --db sample_", line)
             self.assertIn("--authenticationDatabase admin -u admin -p secret123", line)
             self.assertNotIn("--db docs", line)
