@@ -1,41 +1,48 @@
 # [MongoDB Sample Dataset](https://docs.atlas.mongodb.com/sample-data/available-sample-datasets/)
 
-For `mongoimport` the MongoDB database tools need to installed. You can find it [here](https://www.mongodb.com/try/download/database-tools?tck=docs_databasetools)
+MongoDB Database Tools (`mongoimport`) need to be installed to import these collections. Download them from [MongoDB Database Tools](https://www.mongodb.com/try/download/database-tools?tck=docs_databasetools).
 
-> this is a fork of [repo](https://github.com/mcampo2/mongodb-sample-databases).
+See [Documentation Index](docs/index.md) for guided tutorials, ASD-STE100 import procedures, collection metrics, and schema notes.
 
-> the original repo has BSON dump. I've removed it and I added a bash [script](https://github.com/neelabalan/mongodb-sample-dataset/blob/main/script.sh) to import the JSON to respective db 
+> Fork of [mcampo2/mongodb-sample-databases](https://github.com/mcampo2/mongodb-sample-databases) and [neelabalan/mongodb-sample-dataset](https://github.com/neelabalan/mongodb-sample-dataset), replacing binary BSON dumps with 21 NDJSON files imported by [script.sh](script.sh).
 
-Atlas provides sample data you can load into your Atlas clusters. You can use this data to quickly get started experimenting with data in MongoDB and using tools such as the Atlas Perform CRUD Operations in Atlas and MongoDB Charts.
+Atlas provides sample datasets to explore CRUD operations, aggregation pipelines, and MongoDB Charts. MongoDB hosts 7 sample databases (`21` collections total), stored here as separate newline-delimited JSON files inside each `sample_*` directory.
 
-MongoDB does not provide any sample databases on their website, However, they do provide sample databases for their cloud service Atlas.  These databases have been dumped from a MongoDB Atlas cluster using the MongoDB Compass GUI.  There are 7 databases, with each database collection (table) stored in a seperate JSON file.  These files will accelerate learning of MongoDB's features by allowing new developers to quickly experiment with prepopulated datasets.
+## Dataset Import Flow
 
+```mermaid
+flowchart LR
+  Loader["script.sh (host, port, auth)"] -->|"For each sample_* dir"| Scan["sample_*/*.json (21 NDJSON files)"]
+  Scan -->|"mongoimport --drop"| Import["7 MongoDB Databases"]
+  Import --> Check["Verify with mongosh"]
+```
 
 ## Sample Datasets
 
-| Dataset Name                                                                                | Description                                                       | Collections                                                                |
-| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| [Sample AirBnB Listings Dataset](https://docs.atlas.mongodb.com/sample-data/sample-airbnb/) | Contains details on AirBnB listings.                              | listingsAndReviews                                                         |
-| [Sample Analytics Dataset](https://docs.atlas.mongodb.com/sample-data/sample-analytics/)    | Contains training data for a mock financial services application. | accounts, customers, transactions                                          |
-| [Sample Geospatial Dataset](https://docs.atlas.mongodb.com/sample-data/sample-geospatial/)  | Contains shipwreck data.                                          | shipwrecks                                                                 |
-| [Sample Mflix Dataset](https://docs.atlas.mongodb.com/sample-data/sample-mflix/)            | Contains movie data.                                              | comments, movies, theaters, users                                          |
-| [Sample Supply Store Dataset](https://docs.atlas.mongodb.com/sample-data/sample-supplies/)  | Contains data from a mock office supply store.                    | sales                                                                      |
-| [Sample Training Dataset](https://docs.atlas.mongodb.com/sample-data/sample-training/)      | Contains MongoDB training services dataset.                       | companies, grades, inspection, posts, routes, stories, trips, tweets, zips |
-| [Sample Weather Dataset](https://docs.atlas.mongodb.com/sample-data/sample-weather/)        | Contains detailed weather reports.                                | data                                                                       |
+| Dataset Name | Directory | Collections |
+| :--- | :--- | :--- |
+| [Sample AirBnB Listings Dataset](https://docs.atlas.mongodb.com/sample-data/sample-airbnb/) | `sample_airbnb` | `listingsAndReviews` |
+| [Sample Analytics Dataset](https://docs.atlas.mongodb.com/sample-data/sample-analytics/) | `sample_analytics` | `accounts`, `customers`, `transactions` |
+| [Sample Geospatial Dataset](https://docs.atlas.mongodb.com/sample-data/sample-geospatial/) | `sample_geospatial` | `shipwrecks` |
+| [Sample Mflix Dataset](https://docs.atlas.mongodb.com/sample-data/sample-mflix/) | `sample_mflix` | `comments`, `movies`, `sessions`, `theaters`, `users` |
+| [Sample Supply Store Dataset](https://docs.atlas.mongodb.com/sample-data/sample-supplies/) | `sample_supplies` | `sales` |
+| [Sample Training Dataset](https://docs.atlas.mongodb.com/sample-data/sample-training/) | `sample_training` | `companies`, `grades`, `inspections`, `posts`, `routes`, `stories`, `trips`, `tweets`, `zips` |
+| [Sample Weather Dataset](https://docs.atlas.mongodb.com/sample-data/sample-weather/) | `sample_weatherdata` | `data` |
 
-## Running in docker
+## Running in Docker
+
+Start a local MongoDB container (`docker-compose.yaml` or `docker run`) and import all 7 databases:
 
 ```bash
-docker pull mvertes/alpine-mongo
+# Option 1: Docker Compose on port 27017
+docker compose up -d
 
-docker run -d --name mongo -p 2717:27017 -v ~/mongodb:/data/db mvertes/alpine-mongo
+# Option 2: Standalone container on port 27017
+docker run -d --name mongo -p 27017:27017 -v ~/mongodb/mongo:/data/db mongo:latest
 
-# args
-#   hostname   
-#   port
-./script.sh localhost 2717
+# Import all sample_* datasets into localhost:27017
+./script.sh localhost 27017
 
-# start mongo shell
-docker exec -it mongo mongo
+# Start MongoDB shell inside the container
+docker exec -it mongo mongosh
 ```
-
